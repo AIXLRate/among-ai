@@ -1,2 +1,62 @@
 #4/6
 ©new api key 
+
+
+♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠ ملحوظه الي تقراه من الفايل دا امسحه عشان اعرف انك قريته و عشان تكتبلي الي انت عملته و الفايل ميبقاش زحمه ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+
+♠الي ضفته 
+⚔️ Debate Mode
+بدل ما الكل يكمل بعض، ينقسموا FOR vs AGAINST — نص الـ crew يجادل مع الموضوع والنص ضده. مفيد للأسئلة الجدلية.
+🔄 Multi-Round Debates
+تقدر تختار 1-3 جولات. في الجولة الثانية والثالثة، كل نموذج يشوف كلام البقية ويرد عليه — الإجابات بتتطور وتتحسن.
+
+🧠 Conversation Memory في ال localStorage  بيفتكر الشات 
+التطبيق يحتفظ بـ آخر 3 محادثات ويبعتها كـ context للنماذج، فبتقدر تكمل محادثة بدون ما تعيد السياق.
+
+🎤 Voice Input
+بيستخدم Web Speech API عشان تتكلم بدل ما تكتب.
+
+🔊 Text-to-Speech دوس علي دا و بعدين المايك عشان تقدر تكلمه و تسمعه 
+بيقرأ الإجابة النهائية بصوت عالي، مع التحكم في السرعة.
+
+🗳️ Voting & Leaderboard
+بعد كل إجابة تقدر تصوت لأحسن نموذج، وفيه leaderboard بيتتبع الانتصارات.
+
+🌍 Language Detection
+بيكتشف لغة سؤالك تلقائياً ويرد بنفس اللغة (langdetect).
+
+👾 Crew Selector
+تقدر تختار أي النماذج يشاركوا في كل سؤال من إعدادات التطبيق.
+
+⬇️ Export
+تقدر تصدر كل النقاش كـ Markdown file.
+
+🎤 الصوت (Voice Input & TTS)
+مفيش أي AI model — الاتنين بيستخدموا Web APIs مدمجة في المتصفح مجاناً:
+Voice Input (الإدخال):
+javascriptconst SR = window.SpeechRecognition || window.webkitSpeechRecognition
+recognition = new SR()
+ده Web Speech API — المتصفح نفسه بيحوّل الكلام لنص، مش بيبعت لأي سيرفر.
+Text-to-Speech (القراءة):
+javascriptconst utterance = new SpeechSynthesisUtterance(text)
+speechSynthesis.speak(utterance)
+ده SpeechSynthesis API — كمان مدمج في المتصفح، بيستخدم أصوات الجهاز نفسه.
+
+و الميموري يا حوده اهي 
+// حفظ
+localStorage.setItem('among-ai-history', JSON.stringify(chatHistory.slice(-20)))
+
+// استرجاع
+localStorage.getItem('among-ai-history')
+تفاصيل مهمة:
+
+بتحتفظ بـ آخر 20 محادثة فقط
+لما بيبعت للـ backend بيبعت آخر 3 بس كـ context
+لو المستخدم مسح الـ browser data أو ضغط "Clear Memory" — راحت
+كل جهاز/متصفح عنده نسخته الخاصة، مش shared
+
+
+
+♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠ بص بقي الي سبته عشان لو هتضيفه ان الصوت  بيتسمع انجلش بس و بيقراء انجلش بس شوف بقي لو هتضيف العربي و تعدل زي منتا عايز ♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠♠
+
+
