@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Among·AI — Ask anything and watch 7 AI crewmates debate to find the best answer. Powered by Groq."/>
+<title>AMONG·AI — 7 Crewmates, 1 Winner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Righteous&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{min-height:100vh;background:#080B14;color:#fff;font-family:'Nunito',sans-serif;display:flex;flex-direction:column;overflow-x:hidden}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px}
+
+  @keyframes amBounce{from{transform:translateY(0)}to{transform:translateY(-11px)}}
+  @keyframes amBlink{from{opacity:1}to{opacity:0.15}}
+  @keyframes amPulse{0%,100%{opacity:.28}50%{opacity:.9}}
+  @keyframes amTwinkle{0%,100%{opacity:.15}50%{opacity:.85}}
+  @keyframes amSlide{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes amFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+  /* Header */
+  header{position:sticky;top:0;z-index:20;padding:10px 20px;background:rgba(8,11,20,0.94);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.05);display:flex;align-items:center;gap:14px}
+  .header-models{margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .model-badge{font-size:8px;padding:2px 9px;border-radius:99px;font-weight:700;letter-spacing:1px}
+
+  /* Stars */
+  #starfield{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .star{position:absolute;border-radius:50%;background:white}
+
+  /* Main */
+  main{flex:1;overflow-y:auto;padding:24px 20px 8px;position:relative;z-index:1}
+  .inner{max-width:740px;margin:0 auto}
+
+  /* Empty state */
+  #empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:70vh;gap:28px;text-align:center}
+  .empty-crew{display:flex;gap:12px}
+  .empty-title{font-family:'Righteous',cursive;font-size:38px;letter-spacing:5px;line-height:1;margin-bottom:8px}
+  .empty-sub{color:rgba(255,255,255,0.35);font-size:13px;line-height:1.8;max-width:320px}
+  .suggestions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .suggestion-btn{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:10px;padding:8px 14px;color:rgba(255,255,255,0.5);cursor:pointer;font-size:12px;font-family:'Nunito',sans-serif;transition:all .2s}
+  .suggestion-btn:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.8)}
+
+  /* Messages */
+  #messages{display:flex;flex-direction:column;gap:22px;padding-bottom:24px}
+
+  /* User message */
+  .user-msg{display:flex;justify-content:flex-end;animation:amSlide .3s ease}
+  .user-bubble{background:rgba(197,255,42,0.08);border:1px solid rgba(197,255,42,0.18);border-radius:18px 18px 4px 18px;padding:12px 18px;max-width:72%;font-size:15px;line-height:1.65;color:rgba(255,255,255,0.92)}
+
+  /* Progress tracker */
+  .progress-wrap{padding:28px 0 16px;display:flex;flex-direction:column;align-items:center;gap:20px;animation:amSlide .3s ease}
+  .progress-crew{display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap;justify-content:center}
+  .crew-slot{display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .4s ease}
+  .crew-slot.pending{opacity:0.25;filter:grayscale(1)}
+  .crew-slot.done{opacity:1;filter:none}
+  .crew-dot{width:5px;height:5px;border-radius:50%;transition:all .4s ease}
+  .crew-dot.pending{background:rgba(255,255,255,0.15)}
+  .crew-dot.done{box-shadow:0 0 8px var(--dot-color)}
+  .progress-label{color:rgba(255,255,255,0.35);font-size:10px;letter-spacing:3px;animation:amPulse 1.8s ease-in-out infinite}
+  .progress-bar{width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+  .progress-fill{height:100%;background:#C5FF2A;border-radius:99px;transition:width .4s ease;box-shadow:0 0 8px rgba(197,255,42,0.4)}
+
+  /* AI response */
+  .ai-wrap{display:flex;flex-direction:column;gap:12px;animation:amSlide .4s ease}
+  .divider{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,0.22);font-size:9px;letter-spacing:2.5px}
+  .divider-line{flex:1;height:1px;background:rgba(255,255,255,0.06)}
+
+  .winner-card{border-radius:18px;padding:22px 20px 18px;position:relative}
+  .best-badge{position:absolute;top:-13px;left:18px;padding:3px 14px;border-radius:99px;font-size:9px;font-weight:800;letter-spacing:2px;font-family:'Righteous',cursive;color:#080B14}
+  .winner-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px}
+  .winner-info{flex:1;padding-top:2px}
+  .model-name{font-weight:700;font-size:14px;letter-spacing:1.5px;margin-bottom:2px}
+  .model-role{color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px}
+  .answer-text{color:rgba(255,255,255,0.88);font-size:14.5px;line-height:1.78;word-break:break-word}
+  .answer-text p{margin-bottom:10px}
+  .answer-text ul,.answer-text ol{margin:8px 0 8px 20px}
+  .answer-text li{margin-bottom:4px}
+  .answer-text code{background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:13px}
+  .answer-text pre{background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;overflow-x:auto;margin:10px 0}
+  .answer-text pre code{background:none;padding:0}
+  .answer-text strong{color:rgba(255,255,255,0.95)}
+  .judge-reason{margin-top:14px;padding-top:12px;color:rgba(255,255,255,0.3);font-size:11px;font-style:italic;letter-spacing:0.3px}
+
+  .score-bar-wrap{display:flex;align-items:center;gap:7px}
+  .score-track{flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden}
+  .score-fill{height:100%;transition:width 1.3s cubic-bezier(0.4,0,0.2,1)}
+  .score-num{font-size:10px;color:rgba(255,255,255,0.4);font-family:monospace;min-width:26px;text-align:right}
+
+  .toggle-btn{background:none;border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 16px;color:rgba(255,255,255,0.38);cursor:pointer;font-size:10px;letter-spacing:1.8px;transition:all .2s;width:100%;font-family:'Nunito',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px}
+  .toggle-btn:hover{background:rgba(255,255,255,0.04)}
+
+  .copy-btn{background:none;border:1px solid rgba(197,255,42,0.2);border-radius:8px;padding:6px 14px;color:rgba(197,255,42,0.6);cursor:pointer;font-size:10px;letter-spacing:1px;transition:all .2s;font-family:'Nunito',sans-serif;margin-top:12px}
+  .copy-btn:hover{background:rgba(197,255,42,0.08);color:rgba(197,255,42,0.9)}
+
+  .others-wrap{display:flex;flex-direction:column;gap:10px}
+  .other-card{border-radius:14px;padding:14px 16px;animation:amSlide .3s ease}
+  .other-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .other-answer{color:rgba(255,255,255,0.6);font-size:13px;line-height:1.72;word-break:break-word}
+  .other-answer p{margin-bottom:8px}
+  .other-answer ul,.other-answer ol{margin:6px 0 6px 18px}
+  .other-answer code{background:rgba(255,255,255,0.06);padding:1px 4px;border-radius:3px;font-size:12px}
+
+  /* Debate specific */
+  .debate-round{margin-bottom:20px;padding:20px;border-radius:16px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08)}
+  .debate-title{color:rgba(255,255,255,0.5);font-size:11px;letter-spacing:2px;text-align:center;margin-bottom:16px;text-transform:uppercase}
+  .debate-message{margin-bottom:16px;padding:16px;border-radius:12px;background:rgba(0,0,0,0.2);border-left:3px solid transparent}
+  .debate-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .debate-name{color:#fff;font-weight:700;font-size:12px;letter-spacing:1px}
+  .debate-role{font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase}
+  .debate-badge{margin-left:auto;font-size:9px;color:rgba(255,255,255,0.5);background:rgba(255,255,255,0.06);padding:3px 10px;border-radius:99px}
+  .debate-context{font-size:10px;color:rgba(255,255,255,0.35);margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.3);border-radius:6px;line-height:1.5;border-left:2px solid rgba(255,255,255,0.1)}
+  .debate-text{color:rgba(255,255,255,0.85);font-size:13px;line-height:1.75}
+
+  .consensus-card{border:2px solid #C5FF2A;background:linear-gradient(135deg,rgba(197,255,42,0.12) 0%,rgba(197,255,42,0.03) 100%);box-shadow:0 0 40px rgba(197,255,42,0.2)}
+
+  .error-msg{border:1px solid rgba(255,70,85,0.3);border-radius:12px;padding:12px 16px;background:rgba(255,70,85,0.06);color:#FF6B7A;font-size:13px;animation:amSlide .3s ease}
+
+  /* Input */
+  .input-area{position:sticky;bottom:0;z-index:20;padding:12px 20px 16px;background:rgba(8,11,20,0.96);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,0.05)}
+  .input-inner{max-width:740px;margin:0 auto}
+  .input-box{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:16px;padding:4px 4px 4px 16px;transition:border-color .2s}
+  .input-box:focus-within{border-color:rgba(255,255,255,0.2)}
+  #question-input{flex:1;background:none;border:none;outline:none;color:rgba(255,255,255,0.9);font-size:14.5px;font-family:'Nunito',sans-serif;padding:10px 0}
+  #question-input::placeholder{color:rgba(255,255,255,0.3)}
+  #send-btn{padding:10px 24px;border-radius:12px;border:none;font-weight:800;font-size:12px;letter-spacing:1.2px;cursor:pointer;transition:all .2s;font-family:'Nunito',sans-serif}
+  #send-btn.active{background:#C5FF2A;color:#080B14;box-shadow:0 0 16px rgba(197,255,42,0.3)}
+  #send-btn.inactive{background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.22);cursor:default}
+  .powered-by{text-align:center;margin-top:8px;font-size:8.5px;color:rgba(255,255,255,0.16);letter-spacing:1.5px}
+
+  /* Mobile responsive */
+  @media(max-width:640px){
+    .header-models{display:none}
+    .empty-title{font-size:28px;letter-spacing:3px}
+    .empty-crew svg{width:36px;height:54px}
+    .suggestion-btn{font-size:11px;padding:6px 10px}
+    .winner-card{padding:16px 14px}
+    .answer-text{font-size:13.5px}
+    .progress-crew{gap:8px}
+    .crew-slot svg{width:28px;height:42px}
+  }
+</style>
+</head>
+<body>
+
+<!-- Starfield -->
+<div id="starfield"></div>
+
+<!-- Header -->
+<header>
+  <div id="header-crew" style="display:flex;gap:3px"></div>
+  <div>
+    <div style="font-family:'Righteous',cursive;font-size:17px;letter-spacing:3px;line-height:1.1">
+      AMONG<span style="color:#C5FF2A">·AI</span>
+    </div>
+    <div id="header-subtitle" style="font-size:8px;color:rgba(255,255,255,0.28);letter-spacing:2px">LOADING...</div>
+  </div>
+  <div id="header-badges" class="header-models"></div>
+</header>
+
+<!-- Main -->
+<main>
+  <div class="inner">
+    <div id="empty-state">
+      <div class="empty-crew" id="empty-crew"></div>
+      <div>
+        <div class="empty-title">AMONG<span style="color:#C5FF2A">·AI</span></div>
+        <div class="empty-sub">Ask anything. All crewmates answer.<br/>The best answer wins the vote.</div>
+      </div>
+      <div class="suggestions">
+        <button class="suggestion-btn" onclick="setSuggestion('What is a black hole?')">What is a black hole?</button>
+        <button class="suggestion-btn" onclick="setSuggestion('How does GPS work?')">How does GPS work?</button>
+        <button class="suggestion-btn" onclick="setSuggestion('Explain quantum computing')">Explain quantum computing</button>
+      </div>
+    </div>
+    <div id="messages"></div>
+  </div>
+</main>
+
+<!-- Input -->
+<div class="input-area">
+  <div class="input-inner">
+    <div class="input-box">
+      <input id="question-input" placeholder="Ask the crew anything..." autocomplete="off"/>
+      <button id="send-btn" class="inactive" onclick="send()">SEND →</button>
+    </div>
+    <div class="powered-by" id="powered-by"></div>
+  </div>
+</div>
+
+<script>
+// ── State ──
+let MODELS = []
+let loading = false
+
+// ── Init: Fetch models from API ──
+async function init() {
+  try {
+    const res = await fetch('/models')
+    MODELS = await res.json()
+  } catch (e) {
+    // Fallback if API is down during load
+    MODELS = [
+      {id:"fallback", name:"AI", role:"Crewmate", color:"#C5FF2A", dark:"#3a5a00", glow:"rgba(197,255,42,0.25)"}
+    ]
+  }
+  renderHeader()
+  renderEmptyState()
+  renderFooter()
+}
+init()
+
+// ── Markdown ──
+function renderMd(text) {
+  if (!text) return ''
+  try {
+    return marked.parse(text, { breaks: true, gfm: true })
+  } catch (e) {
+    return escHtml(text)
+  }
+}
+
+// ── Crewmate SVG ──
+function crewmateSVG(color, dark, size=40) {
+  const h = size * 1.5
+  return `<svg viewBox="0 0 52 78" width="${size}" height="${h}" style="display:block;flex-shrink:0">
+    <rect x="38" y="26" width="13" height="24" rx="5.5" fill="${dark}"/>
+    <ellipse cx="22" cy="54" rx="21" ry="23" fill="${color}"/>
+    <ellipse cx="22" cy="20" rx="19" ry="20" fill="${color}"/>
+    <path d="M6 12 Q22 1 38 12 Q39 31 22 33 Q5 31 6 12Z" fill="#C8EDFF" opacity="0.86"/>
+    <path d="M11 13 Q20 6 28 10" stroke="white" stroke-width="2" fill="none" opacity="0.45" stroke-linecap="round"/>
+    <rect x="6"  y="71" width="12" height="7" rx="3.5" fill="${dark}"/>
+    <rect x="24" y="71" width="12" height="7" rx="3.5" fill="${dark}"/>
+  </svg>`
+}
+
+// ── Stars ──
+const sf = document.getElementById('starfield')
+for(let i=0;i<150;i++){
+  const s=document.createElement('div')
+  s.className='star'
+  const x=((i*137.508)%100).toFixed(3)
+  const y=((i*89.334)%100).toFixed(3)
+  const sz=(0.4+(i%4)*0.45).toFixed(1)
+  const delay=((i%8)*0.4).toFixed(1)
+  const dur=(2.5+(i%5)*0.6).toFixed(1)
+  s.style.cssText=`left:${x}%;top:${y}%;width:${sz}px;height:${sz}px;animation:amTwinkle ${dur}s ease-in-out ${delay}s infinite`
+  sf.appendChild(s)
+}
+
+// ── Render Functions ──
+function renderHeader() {
+  const hc = document.getElementById('header-crew')
+  const hb = document.getElementById('header-badges')
+  const hs = document.getElementById('header-subtitle')
+  hc.innerHTML = ''
+  hb.innerHTML = ''
+  hs.textContent = `${MODELS.length} CREWMATES · 1 WINNER`
+  MODELS.forEach(m => {
+    const d = document.createElement('div')
+    d.style.filter = `drop-shadow(0 0 4px ${m.color}60)`
+    d.innerHTML = crewmateSVG(m.color, m.dark, 18)
+    hc.appendChild(d)
+    const b = document.createElement('div')
+    b.className = 'model-badge'
+    b.title = m.role
+    b.textContent = m.name
+    b.style.cssText = `border:1px solid ${m.color}45;color:${m.color}`
+    hb.appendChild(b)
+  })
+}
+
+function renderEmptyState() {
+  const ec = document.getElementById('empty-crew')
+  ec.innerHTML = ''
+  MODELS.forEach((m,i) => {
+    const d = document.createElement('div')
+    d.style.cssText = `animation:amFloat ${1.8+i*0.3}s ease-in-out ${i*0.2}s infinite;filter:drop-shadow(0 0 10px ${m.color}60)`
+    d.innerHTML = crewmateSVG(m.color, m.dark, 52)
+    ec.appendChild(d)
+  })
+}
+
+function renderFooter() {
+  document.getElementById('powered-by').textContent = 'POWERED BY GROQ · ' + MODELS.map(m => m.name).join(' · ')
+}
+
+// ── Score bar ──
+function scoreBarHTML(score, color) {
+  return `<div class="score-bar-wrap">
+    <div class="score-track"><div class="score-fill" data-score="${score}" style="width:0%;background:${color};box-shadow:0 0 8px ${color}"></div></div>
+    <span class="score-num">${score}</span>
+  </div>`
+}
+
+function animateScores() {
+  document.querySelectorAll('.score-fill[data-score]').forEach(el => {
+    const s = el.getAttribute('data-score')
+    setTimeout(() => { el.style.width = s + '%' }, 120)
+  })
+}
+
+// ── Input ──
+const input = document.getElementById('question-input')
+const btn = document.getElementById('send-btn')
+
+input.addEventListener('input', () => {
+  if(!loading && input.value.trim()) { btn.className='active'; btn.textContent='SEND →' }
+  else if(!loading) { btn.className='inactive'; btn.textContent='SEND →' }
+})
+input.addEventListener('keydown', e => {
+  if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); send() }
+})
+
+function setSuggestion(q){ input.value=q; btn.className='active'; input.focus() }
+
+function setLoading(v){
+  loading=v
+  input.disabled=v
+  btn.className=v?'inactive':'active'
+  btn.textContent=v?'···':'SEND →'
+}
+
+// ── Messages ──
+const msgs = document.getElementById('messages')
+const empty = document.getElementById('empty-state')
+
+function addUserMsg(text){
+  empty.style.display='none'
+  const d=document.createElement('div')
+  d.className='user-msg'
+  d.innerHTML=`<div class="user-bubble">${escHtml(text)}</div>`
+  msgs.appendChild(d)
+  scrollBottom()
+}
+
+function addProgress() {
+  const d = document.createElement('div')
+  d.id = 'progress-msg'
+  d.className = 'progress-wrap'
+
+  let inner = '<div class="progress-crew">'
+  MODELS.forEach((m, i) => {
+    inner += `<div class="crew-slot pending" id="crew-slot-${i}" style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div style="animation:amBounce 0.65s ease-in-out ${i*0.13}s infinite alternate">${crewmateSVG(m.color, m.dark, 34)}</div>
+      <div class="crew-dot pending" id="crew-dot-${i}" style="--dot-color:${m.color};background:rgba(255,255,255,0.15)"></div>
+    </div>`
+  })
+  inner += '</div>'
+  inner += '<div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>'
+  inner += '<div class="progress-label" id="progress-label">ROUND 1 · CREW IS DEBATING...</div>'
+  d.innerHTML = inner
+  msgs.appendChild(d)
+  scrollBottom()
+}
+
+function updateProgress(modelIdx, round, responded, total) {
+  const slot = document.getElementById(`crew-slot-${modelIdx}`)
+  const dot = document.getElementById(`crew-dot-${modelIdx}`)
+  const fill = document.getElementById('progress-fill')
+  const label = document.getElementById('progress-label')
+
+  if (slot) { slot.className = 'crew-slot done' }
+  if (dot) {
+    const m = MODELS[modelIdx]
+    dot.className = 'crew-dot done'
+    dot.style.background = m.color
+  }
+  if (fill) { fill.style.width = `${(responded / (total * 2)) * 100}%` }
+  if (label) { label.textContent = `ROUND ${round} · ${responded}/${total} RESPONDED` }
+}
+
+function setProgressSynthesizing() {
+  const label = document.getElementById('progress-label')
+  const fill = document.getElementById('progress-fill')
+  if (label) label.textContent = '🧠 SYNTHESIZING CONSENSUS...'
+  if (fill) fill.style.width = '90%'
+}
+
+function removeProgress(){
+  const l = document.getElementById('progress-msg')
+  if(l) l.remove()
+}
+
+function addError(text){
+  const d=document.createElement('div')
+  d.className='error-msg'
+  d.textContent='⚠ '+text
+  msgs.appendChild(d)
+  scrollBottom()
+}
+
+function addAIResponse(data){
+  const wrap=document.createElement('div')
+  wrap.className='ai-wrap'
+
+  // Language emoji
+  const langEmoji = {
+    'Arabic':'🇸🇦','English':'🇬🇧','Spanish':'🇪🇸','French':'🇫🇷',
+    'German':'🇩🇪','Italian':'🇮🇹','Portuguese':'🇵🇹','Russian':'🇷🇺',
+    'Chinese':'🇨🇳','Japanese':'🇯🇵','Korean':'🇰🇷','Hindi':'🇮🇳',
+    'Turkish':'🇹🇷','Persian':'🇮🇷','Hebrew':'🇮🇱','Thai':'🇹🇭',
+  }[data.detected_language] || '🌐'
+
+  // Divider
+  wrap.innerHTML=`<div class="divider"><div class="divider-line"></div>${langEmoji} ${data.detected_language || 'Auto'} · 🚨 EMERGENCY MEETING CONCLUDED<div class="divider-line"></div></div>`
+
+  // ── Consensus Card ──
+  const finalCard=document.createElement('div')
+  finalCard.className='winner-card consensus-card'
+
+  let contributorIcons = ''
+  if(data.top_contributors && data.top_contributors.length > 0){
+    contributorIcons = data.top_contributors.map(name => {
+      const model = MODELS.find(m => m.name === name) || MODELS[0]
+      return `<div style="filter:drop-shadow(0 0 6px ${model.color}80);margin-right:-8px;">${crewmateSVG(model.color, model.dark, 36)}</div>`
+    }).join('')
+  } else {
+    contributorIcons = crewmateSVG(MODELS[0].color, MODELS[0].dark, 40)
+  }
+
+  finalCard.innerHTML=`
+    <div class="best-badge" style="background:#C5FF2A;color:#080B14;">★ CREW CONSENSUS</div>
+    <div class="winner-header">
+      <div style="display:flex;align-items:center;margin-right:10px;">
+        ${contributorIcons}
+      </div>
+      <div class="winner-info">
+        <div class="model-name" style="color:#C5FF2A;font-size:16px;">Collaborative Answer</div>
+        <div class="model-role">${data.total_rounds || 2} rounds of debate · Top: ${(data.top_contributors || []).join(', ') || 'All crewmates'}</div>
+      </div>
+    </div>
+    <div class="answer-text">${renderMd(data.final_answer || 'No answer generated')}</div>
+    ${data.debate_summary ? `<div class="judge-reason" style="border-top:1px solid rgba(197,255,42,0.2);color:rgba(197,255,42,0.6);">📊 ${escHtml(data.debate_summary)}</div>` : ''}
+  `
+
+  // Copy button
+  const copyBtn = document.createElement('button')
+  copyBtn.className = 'copy-btn'
+  copyBtn.textContent = '📋 Copy Answer'
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(data.final_answer || '').then(() => {
+      copyBtn.textContent = '✓ Copied!'
+      setTimeout(() => copyBtn.textContent = '📋 Copy Answer', 2000)
+    })
+  }
+  finalCard.appendChild(copyBtn)
+  wrap.appendChild(finalCard)
+
+  // ── Debate Log Toggle ──
+  if (data.debate_log && data.debate_log.length > 0) {
+    const debateToggle=document.createElement('button')
+    debateToggle.className='toggle-btn'
+    debateToggle.style.cssText='border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);margin-bottom:8px;'
+    debateToggle.innerHTML=`📜 VIEW FULL DEBATE LOG <span style="opacity:.5">(${data.total_rounds || 2} rounds)</span>`
+
+    const debateDiv=document.createElement('div')
+    debateDiv.className='others-wrap'
+    debateDiv.style.display='none'
+
+    data.debate_log.forEach(round => {
+      const roundCard=document.createElement('div')
+      roundCard.className='debate-round'
+      let roundHTML=`<div class="debate-title">${round.title || `Round ${round.round}`}</div>`
+
+      round.responses.forEach(r => {
+        const model = MODELS.find(m => m.name === r.model_name) || MODELS[0]
+        const isReply = !!r.responding_to
+
+        roundHTML+=`
+          <div class="debate-message" style="border-left-color:${model.color};background:${model.color}08;">
+            <div class="debate-header">
+              <div style="filter:drop-shadow(0 0 4px ${model.color}60);">${crewmateSVG(model.color, model.dark, 32)}</div>
+              <div>
+                <div class="debate-name" style="color:${model.color};">${r.model_name}</div>
+                <div class="debate-role">${r.role}</div>
+              </div>
+              ${isReply ?
+                `<span class="debate-badge">💬 Replying</span>` :
+                `<span class="debate-badge">🎤 Opening</span>`
+              }
+            </div>
+            ${isReply && r.responding_to ?
+              `<div class="debate-context"><strong style="color:rgba(255,255,255,0.5);">Seeing crewmates' thoughts:</strong> ${escHtml(r.responding_to.substring(0, 200))}${r.responding_to.length > 200 ? '...' : ''}</div>`
+              : ''
+            }
+            <div class="debate-text">${renderMd(r.response)}</div>
+          </div>
+        `
+      })
+
+      roundCard.innerHTML=roundHTML
+      debateDiv.appendChild(roundCard)
+    })
+
+    let debateExpanded=false
+    debateToggle.onclick=()=>{
+      debateExpanded=!debateExpanded
+      debateDiv.style.display=debateExpanded?'flex':'none'
+      debateToggle.innerHTML=(debateExpanded?'📜 HIDE':'📜 VIEW')+` FULL DEBATE LOG <span style="opacity:.5">(${data.total_rounds || 2} rounds)</span>`
+      debateToggle.style.background=debateExpanded?'rgba(255,255,255,0.06)':'none'
+      if(debateExpanded) setTimeout(scrollBottom, 100)
+    }
+
+    wrap.appendChild(debateToggle)
+    wrap.appendChild(debateDiv)
+  }
+
+  // ── Individual Scores ──
+  const finalToggle=document.createElement('button')
+  finalToggle.className='toggle-btn'
+  finalToggle.innerHTML=`▼ SEE FINAL SCORES <span style="opacity:.5">(${MODELS.length})</span>`
+  let finalExpanded=false
+  const finalDiv=document.createElement('div')
+  finalDiv.className='others-wrap'
+  finalDiv.style.display='none'
+
+  const lastRound = data.debate_log?.[data.debate_log.length - 1]
+  const finalResponses = lastRound?.responses || []
+
+  finalResponses.forEach((r, idx) => {
+    const model = MODELS.find(m => m.name === r.model_name) || MODELS[idx] || MODELS[0]
+    const score = data.scores?.[r.model_idx ?? idx] || 75
+
+    const card=document.createElement('div')
+    card.className='other-card'
+    card.style.cssText=`border:1px solid ${model.color}30;background:${model.color}06`
+    card.innerHTML=`
+      <div class="other-header">
+        ${crewmateSVG(model.color, model.dark, 34)}
+        <div style="flex:1">
+          <div style="color:${model.color};font-weight:700;font-size:12px;letter-spacing:1.2px;margin-bottom:4px">${model.name}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px">${model.role}</div>
+          ${scoreBarHTML(score, model.color)}
+        </div>
+      </div>
+      <div class="other-answer">${renderMd(r.response)}</div>
+    `
+    finalDiv.appendChild(card)
+  })
+
+  finalToggle.onclick=()=>{
+    finalExpanded=!finalExpanded
+    finalDiv.style.display=finalExpanded?'flex':'none'
+    finalToggle.innerHTML=(finalExpanded?'▲ HIDE':'▼ SEE')+` FINAL SCORES <span style="opacity:.5">(${MODELS.length})</span>`
+    finalToggle.style.background=finalExpanded?'rgba(255,255,255,0.04)':'none'
+    if(finalExpanded) setTimeout(()=>{ animateScores(); scrollBottom() }, 100)
+  }
+
+  wrap.appendChild(finalToggle)
+  wrap.appendChild(finalDiv)
+
+  msgs.appendChild(wrap)
+  scrollBottom()
+}
+
+function scrollBottom(){ setTimeout(()=>window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'}),50) }
+function escHtml(t){ const d=document.createElement('div'); d.textContent=t; return d.innerHTML }
+
+// ── Send (SSE Streaming) ──
+async function send(){
+  const q=input.value.trim()
+  if(!q||loading) return
+  input.value=''
+  btn.className='inactive'
+  setLoading(true)
+  addUserMsg(q)
+  addProgress()
+
+  let respondedR1 = 0
+  let respondedR2 = 0
+  const total = MODELS.length
+
+  try {
+    const res = await fetch('/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({question: q})
+    })
+
+    if (!res.ok) throw new Error(`Server error ${res.status}`)
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+
+    while (true) {
+      const {done, value} = await reader.read()
+      if (done) break
+
+      buffer += decoder.decode(value, {stream: true})
+      const lines = buffer.split('\n')
+      buffer = lines.pop() // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue
+        let event
+        try {
+          event = JSON.parse(line.slice(6))
+        } catch (e) { continue }
+
+        switch (event.type) {
+          case 'round_start':
+            const label = document.getElementById('progress-label')
+            if (label) label.textContent = `ROUND ${event.round} · WAITING FOR CREW...`
+            // Reset crew slots for round 2
+            if (event.round === 2) {
+              MODELS.forEach((m, i) => {
+                const slot = document.getElementById(`crew-slot-${i}`)
+                const dot = document.getElementById(`crew-dot-${i}`)
+                if (slot) slot.className = 'crew-slot pending'
+                if (dot) { dot.className = 'crew-dot pending'; dot.style.background = 'rgba(255,255,255,0.15)' }
+              })
+            }
+            break
+
+          case 'model_response':
+            if (event.round === 1) { respondedR1++; updateProgress(event.model_idx, 1, respondedR1, total) }
+            else { respondedR2++; updateProgress(event.model_idx, 2, total + respondedR2, total) }
+            break
+
+          case 'synthesizing':
+            setProgressSynthesizing()
+            break
+
+          case 'done':
+            removeProgress()
+            addAIResponse(event)
+            break
+        }
+      }
+    }
+  } catch(err){
+    removeProgress()
+    addError(err.message)
+  }
+  setLoading(false)
+}
+</script>
+</body>
+</html>

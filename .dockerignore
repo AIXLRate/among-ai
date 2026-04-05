@@ -1,0 +1,12 @@
+.git
+.env
+__pycache__
+*.pyc
+*.egg-info
+.venv
+venv
+.github
+.gitignore
+README.md
+among-ai-struc.jpg
+tests/
